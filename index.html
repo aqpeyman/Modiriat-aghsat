@@ -118,7 +118,7 @@ details>summary::before{content:"◂ ";color:var(--mu)}details[open]>summary::be
 <div class="c"><div class="sh"><h2 id="vt">🗂 وام‌ها</h2><div class="r"><select id="srt"><option value="">⇅ مرتب‌سازی</option><option value="day">بر اساس روز سررسید</option><option value="rem">بیشترین مانده</option><option value="start">قدیمی‌ترین شروع</option><option value="name">بر اساس نام</option></select><button id="vw">نمای کارتی</button></div></div><div id="main"></div></div>
 <details class="c" id="feed"><summary>🏷 کارمزد سالانه <span id="feh" style="font-weight:400;color:var(--mu);font-size:12px"></span></summary><p class="fx">هر سال ۱۲ ماه است: ۱۱ ماه قسط اصل و ۱ ماه (ماه اول هر سال: ماه ۱، ۱۳، ۲۵ و …) فقط کارمزد. کارمزد هر سال = مانده وام در ابتدای آن سال × نرخ کارمزد ÷ ۱۰۰ × ۱۲ ÷ (تعداد اقساط همان سال). در جدول با ★ و حلقه نارنجی نشان داده می‌شود.</p><div id="ann"></div></details>
 <details class="c" id="tools"><summary>🛠 بک‌آپ و بازیابی</summary>
-<div style="text-align:center;margin-top:10px"><button id="bk2" style="background:var(--pr);color:#fff;padding:9px 16px;font-size:13px;margin-bottom:8px">💾 ذخیره بک‌آپ / یادآور تقویم</button><br><button id="instBtn" style="background:var(--chip);padding:9px 16px;font-size:13px;margin-bottom:8px">📲 نصب روی گوشی</button><br>
+<div style="text-align:center;margin-top:10px"><button id="bk2" style="background:var(--pr);color:#fff;padding:9px 16px;font-size:13px;margin-bottom:8px">💾 ذخیره بک‌آپ / یادآور تقویم</button><br><button id="instBtn" style="background:var(--chip);padding:9px 16px;font-size:13px;margin-bottom:8px">📲 نصب روی گوشی / بررسی نصب</button><div id="diag" class="fx" style="text-align:start;line-height:1.9"></div>
 <label style="position:relative;display:inline-block;background:var(--chip);padding:9px 18px;border-radius:12px;font-size:13px;cursor:pointer;overflow:hidden">📂 بازیابی از فایل بک‌آپ<input type="file" id="fl" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:200px"></label></div>
 <details style="margin-top:10px"><summary style="font-size:12.5px;color:var(--mu);font-weight:400">اگر انتخاب فایل باز نشد: بازیابی با چسباندن متن</summary>
 <textarea id="pt" dir="ltr" rows="4" placeholder="متن بک‌آپ (محتوای فایل HTML یا JSON) را اینجا بچسبان" style="width:100%;margin-top:8px;font-size:12px;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);padding:8px"></textarea>
@@ -379,17 +379,28 @@ $('upd').open=ld('aghsat_up')!=='0';$('upd').ontoggle=()=>st('aghsat_up',$('upd'
 
 (function(){
 const stand=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
-const recent=Date.now()-(+ld('aghsat_inst')||0)<7*864e5;
-const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.MSStream;
-let dp=null;const box=$('inst');
-const show=(t,go)=>{$('instT').textContent=t;$('instGo').style.display=go?'':'none';box.classList.add('s')};
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e;if(!stand&&!recent)show('📲 اپ را روی گوشی نصب کن تا مثل برنامه باز شود',true)});
+const ua=navigator.userAgent,ios=/iphone|ipad|ipod/i.test(ua)&&!window.MSStream,inapp=/Telegram|Instagram|FBAN|FBAV|Line\/|; wv\)|WebView/i.test(ua);
+let dp=null,got=false,act=null;const box=$('inst');
+const show=(t,lbl,fn)=>{$('instT').textContent=t;const g=$('instGo');g.style.display=lbl?'':'none';g.textContent=lbl||'';act=fn||null;box.classList.add('s')};
+const doInst=async()=>{if(dp){dp.prompt();try{await dp.userChoice}catch(e){}dp=null}box.classList.remove('s')};
+async function diagRun(){const L=[],ok=(c,t)=>L.push((c?'✅ ':'❌ ')+t);
+ok(location.protocol==='https:'||location.hostname==='localhost','آدرس امن (https)');
+let mj=null;const ml=document.querySelector('link[rel=manifest]');
+try{const r=await fetch(ml.href);if(!r.ok)throw 0;ok(true,'فایل manifest.webmanifest');mj=await r.json()}catch(e){ok(false,'فایل manifest.webmanifest پیدا نشد (آپلود نشده یا اسمش فرق دارد)')}
+if(mj)for(const ic of mj.icons){try{const r=await fetch(new URL(ic.src,ml.href));ok(r.ok,'آیکن '+ic.src)}catch(e){ok(false,'آیکن '+ic.src+' پیدا نشد')}}
+try{const r=await navigator.serviceWorker.getRegistration();ok(!!r,'سرویس‌ورکر (sw.js)')}catch(e){ok(false,'سرویس‌ورکر در این مرورگر کار نمی‌کند')}
+ok(!inapp,'باز شدن در مرورگر اصلی (نه داخل تلگرام / اینستاگرام)');
+ok(got||ios,'مرورگر اجازه‌ی نصب را اعلام کرده'+(got?'':' (اگر قبلاً نصب کرده‌ای یا مرورگر Chrome نیست، طبیعی است)'));
+$('diag').innerHTML=L.join('<br>')}
+const diagOpen=()=>{$('tools').open=true;diagRun();$('tools').scrollIntoView({behavior:'smooth'})};
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e;got=true;if(!stand)show('📲 اپ را روی گوشی نصب کن تا مثل برنامه باز شود','نصب',doInst)});
 window.addEventListener('appinstalled',()=>{box.classList.remove('s');dp=null;msg('نصب شد ✓')});
-if(ios&&!stand&&!recent)setTimeout(()=>show('📲 برای نصب: دکمه اشتراک‌گذاری ⬆︎ را بزن و «Add to Home Screen» را انتخاب کن',false),1500);
-const go=async()=>{if(dp){dp.prompt();try{await dp.userChoice}catch(e){}dp=null}box.classList.remove('s')};
-$('instGo').onclick=go;
-$('instX').onclick=()=>{box.classList.remove('s');st('aghsat_inst',Date.now())};
-$('instBtn').onclick=()=>{if(stand){msg('برنامه همین‌الان نصب است ✓');return}if(dp){go();return}show(ios?'برای نصب: دکمه اشتراک‌گذاری ⬆︎ ← Add to Home Screen':'برای نصب: منوی مرورگر (⋮) ← «Install app» یا «Add to Home screen»',false)};
+$('instGo').onclick=()=>act&&act();
+$('instX').onclick=()=>box.classList.remove('s');
+if(!stand){
+if(ios)setTimeout(()=>show('📲 برای نصب: دکمه اشتراک‌گذاری ⬆︎ را بزن و «Add to Home Screen» را انتخاب کن'),1200);
+else setTimeout(()=>{if(!got)show(inapp?'📲 این صفحه داخل مرورگرِ یک برنامه (تلگرام، اینستاگرام…) باز شده. برای نصب، آن را در Chrome باز کن (منو ⋮ ← Open in browser)':'📲 برای نصب: منوی مرورگر (⋮) ← «Install app» یا «Add to Home screen»','بررسی',diagOpen)},2500)}
+$('instBtn').onclick=()=>{if(stand){msg('برنامه همین‌الان نصب است ✓');return}if(dp){doInst();return}diagOpen()};
 if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0)navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
